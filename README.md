@@ -1,8 +1,5 @@
 # README
 
-### Description
-Written in node.js to download all the mangas on [nhentai](nhentai.to).
-
 ### Installation
 
 ##### Create .env
