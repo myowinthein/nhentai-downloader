@@ -19,6 +19,7 @@ npm install
 
 ##### Run the Project
 ```shell
+npm run start
 npm run dev (with hotreloading)
 ```
 
