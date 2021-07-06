@@ -1,8 +1,11 @@
+require('dotenv').config()
+
 const express = require('express')
 const fetch = require('node-fetch')
 const { JSDOM } = require('jsdom')
 const https = require('https')
 const fs = require('fs')
+const validUrl = require('valid-url')
 
 const app = express()
 const port = 3000
@@ -10,9 +13,10 @@ const port = 3000
 app.get('/', async (req, res) => {
 	// prepare data
 	const proxy = 'https://cors-anywhere.herokuapp.com'
-	const env = 'prod' // prod
-	const min = 12 // change here after fetching
-	const max = 364152 // change here after fetching; July 6th, 2021 3:22PM
+	const env = process.env.NODE_ENV
+	const min = process.env.MIN // change after fetching
+	const max = process.env.MAX // change after fetching; July 6th, 2021 3:22PM
+	let format = 'jpg'
 
 	// prepare function
 	const createFolder = function (path) {
@@ -22,21 +26,44 @@ app.get('/', async (req, res) => {
 	}
 
 	const downloadImage = function (url, savePath, index) {
-		const file = fs.createWriteStream(`${savePath}/${index}.jpg`)
+		const file = fs.createWriteStream(`${savePath}/${index}.${format}`)
 		const request = https.get(url, function(response) {
 			response.pipe(file)
 		})
 	}
 
+	const sleep = function (ms = 1000) {
+		return new Promise((resolve) => {
+			setTimeout(resolve, ms)
+		})
+	}
+
+	const getFullSize = function (url) {
+		let fullSizeURL = url
+		if (env == 'production') {
+            fullSizeURL = url.replace(`t.${format}`, `.${format}`)
+        }
+
+		return fullSizeURL
+	}
+
+	const getImageFormat = function (url) {
+		return url.split(/[#?]/)[0].split('.').pop().trim()
+	}
+
 	// loop all pages
     for (let n = min; n <= max; n++) {
+		// log
+		console.log('\x1b[36m%s\x1b[0m', `Fetching contents of page-${n}`)
+
+		// add delay to prevent proxy timeout
+		if (n%10 === 0) {
+			await sleep()
+		}
+
         // fetch page contents
 		const url = `${proxy}/https://nhentai.to/g/${n}`
 		const headers = {'X-Requested-With': 'XMLHttpRequest'}
-		const savePath = `nhentai/${n}`
-
-		// log
-		console.log('\x1b[36m%s\x1b[0m', `Fetching contents of page-${n}`)
 
 		const response = await fetch(url, {headers: headers})
 		const html = await response.text()
@@ -46,17 +73,24 @@ app.get('/', async (req, res) => {
 
 		// fetch image tabs
 		const doc = new JSDOM(html)
+		const title = doc.window.document.querySelector('#info h1').innerHTML
 		const images = doc.window.document.querySelectorAll('#thumbnail-container > .thumb-container img')
 		const totalImages = images.length / 2
+		const savePath = `nhentai/${n} - ${title}`
 
 		// loop image tabs
 		images.forEach((image, index) => {
+			// prepare data
+			const imageSrc = image.src
+
 			// create folder
 			createFolder(savePath)
 
 			// download images
-			if (index%2 != 0) { // skipped base64
-				downloadImage(image.src, savePath, index)
+			if (validUrl.isHttpsUri(imageSrc)) { // skipped base64
+				format = getImageFormat(imageSrc)
+				const imageSrcFull = getFullSize(imageSrc)
+				downloadImage(imageSrcFull, savePath, index)
 			}
 		})
 
@@ -64,7 +98,7 @@ app.get('/', async (req, res) => {
 		console.log('\x1b[32m%s\x1b[0m', `Downloaded ${totalImages} images in page-${n}`)
 
         // only loop first page in dev mode
-        if (env == 'dev') {
+        if (env == 'development') {
             break
         }
     }
@@ -73,8 +107,6 @@ app.get('/', async (req, res) => {
 	console.log('\x1b[31m%s\x1b[1m', `Make changes in min & max variables for next time!`)
 })
 
-const server = app.listen(port, () => {
+app.listen(port, () => {
 	console.log(`Listening at http://localhost:${port}`)
 })
-
-server.timeout = 0
