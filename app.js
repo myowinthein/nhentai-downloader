@@ -75,7 +75,7 @@ app.get('/', async (req, res) => {
 		const doc = new JSDOM(html)
 		const title = doc.window.document.querySelector('#info h1').innerHTML
 		const images = doc.window.document.querySelectorAll('#thumbnail-container > .thumb-container img')
-		const totalImages = images.length / 2
+		const totalImages = images.length / 2 // jsdom package auto translate url into base64 & double the images
 		const savePath = `nhentai/${n} - ${title}`
 
 		// loop image tabs

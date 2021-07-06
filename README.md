@@ -9,6 +9,7 @@ cp .env.example/ .env/
 
 ##### Install Node Packakges
 ```shell
+npm install -g nodemon
 npm install
 ```
 
