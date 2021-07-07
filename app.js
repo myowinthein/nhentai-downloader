@@ -25,8 +25,8 @@ app.get('/', async (req, res) => {
 		}
 	}
 
-	const downloadImage = function (url, savePath, index) {
-		const file = fs.createWriteStream(`${savePath}/${index}.${format}`)
+	const downloadImage = function (url, savePath, counter) {
+		const file = fs.createWriteStream(`${savePath}/${counter}.${format}`)
 		const request = https.get(url, function(response) {
 			response.pipe(file)
 		})
@@ -79,7 +79,8 @@ app.get('/', async (req, res) => {
 		const savePath = `nhentai/${n} - ${title}`
 
 		// loop image tabs
-		images.forEach((image, index) => {
+		let counter = 1
+		images.forEach(image => {
 			// prepare data
 			const imageSrc = image.src
 
@@ -90,7 +91,8 @@ app.get('/', async (req, res) => {
 			if (validUrl.isHttpsUri(imageSrc)) { // skipped base64
 				format = getImageFormat(imageSrc)
 				const imageSrcFull = getFullSize(imageSrc)
-				downloadImage(imageSrcFull, savePath, index)
+				downloadImage(imageSrcFull, savePath, counter)
+				counter++
 			}
 		})
 
